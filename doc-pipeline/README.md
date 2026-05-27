@@ -41,7 +41,7 @@ Mode B (Markdown → Word only) does **not** need an API token.
 
 ```bash
 # 1. Clone or download
-git clone https://github.com/YOUR_USERNAME/doc-pipeline.git
+git clone https://github.com/kesusu/doc-pipeline.git
 
 # 2. Copy to Claude Code commands directory
 cp doc-pipeline.md ~/.claude/commands/
@@ -173,7 +173,7 @@ If this saved you from retyping a 300-page textbook, leave a star — your finge
 
 If you found a bug or have an idea, open an issue. If it helped you, share it with someone who's still manually copying from scanned PDFs.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=YOUR_USERNAME/doc-pipeline&type=Date)](https://star-history.com/#YOUR_USERNAME/doc-pipeline&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=kesusu/doc-pipeline&type=Date)](https://star-history.com/#kesusu/doc-pipeline&Date)
 
 ## License
 

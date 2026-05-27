@@ -58,7 +58,7 @@
 
 ```bash
 # 1. 克隆或下载本仓库
-git clone https://github.com/YOUR_USERNAME/doc-pipeline.git
+git clone https://github.com/kesusu/doc-pipeline.git
 
 # 2. 复制到 Claude Code 命令目录
 cp doc-pipeline.md ~/.claude/commands/
