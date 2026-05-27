@@ -1,0 +1,24 @@
+# 防止意外提交 API Token
+__pycache__/
+*.pyc
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# OCR 输出和转换产物
+output/
+docx_output/
+ocr_output/
+
+# Word 临时文件
+~$*.docx

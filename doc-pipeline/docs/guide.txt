@@ -1,0 +1,178 @@
+doc-pipeline — Installation & User Guide
+=========================================
+
+What is this?
+  A Claude Code skill that does two things:
+  1. OCR text recognition: scanned PDF / images → Markdown text
+  2. Document conversion: Markdown → Word (with editable formulas, proper fonts, and professional formatting)
+
+  Type /doc-pipeline in Claude Code to start.
+
+---
+
+Prerequisites
+
+  1. Python 3.8+
+     Check: python --version or python3 --version
+
+  2. pandoc (required — converts Markdown to Word)
+     Windows:  winget install JohnMacFarlane.Pandoc
+     macOS:    brew install pandoc
+     Linux:    sudo apt install pandoc  (Debian/Ubuntu)
+               sudo dnf install pandoc  (Fedora)
+     After install, restart terminal and verify: pandoc --version
+
+  3. Python packages
+     pip install requests python-docx lxml
+     Or: pip install -r ~/.claude/commands/doc-pipeline/scripts/requirements.txt
+
+  4. PaddleOCR API Token (only needed for OCR — Mode A or C)
+     Register at: https://aistudio.baidu.com/paddleocr
+     Two ways to configure your token:
+       Option A: Edit scripts/ocr_api.py → CONFIG["token"] = "your_token"
+       Option B: Set environment variable PADDLEOCR_TOKEN (recommended, no source edit)
+     Don't need OCR? Skip this step — just use Mode B.
+
+---
+
+Usage
+
+  Type /doc-pipeline in Claude Code. Claude will guide you through each step.
+
+  Mode A: OCR recognition (images/PDF → Markdown)
+  Mode B: Convert documents (existing Markdown → Word)
+  Mode C: Full pipeline (OCR → Word in one go)
+
+  Or specify directly:
+    /doc-pipeline convert my_notes/ to Word
+    /doc-pipeline OCR scan.pdf and convert to Word
+
+---
+
+OCR API Modes
+
+  Two PaddleOCR API modes are supported:
+
+  Mode         API                      Best for
+  sync         layout-parsing (sync)    Single page / small files, instant result
+  async        jobs API (async poll)    Multi-page PDF, takes 1-5 minutes
+
+  Default is async mode. To switch, edit ocr_api.py CONFIG["mode"],
+  or set environment variable PADDLEOCR_MODE=sync.
+
+  Note: sync and async modes use different API endpoints and auth formats.
+  This is by PaddleOCR's design — no manual handling needed.
+
+---
+
+Custom Fonts
+
+  Default: SimSun (body), SimHei (headings), Times New Roman (Latin).
+
+  Edit scripts/convert.py → FONT_CONFIG:
+
+    FONT_CONFIG = {
+        'cn_body': 'SimSun',          # Body text Chinese font
+        'cn_heading': 'SimHei',       # Heading font (Heading styles)
+        'latin': 'Times New Roman',   # English/numbers/formula font
+    }
+
+  Common Chinese font names by platform:
+    Windows:  SimSun, SimHei, KaiTi, FangSong, Microsoft YaHei
+    macOS:    Songti SC, Heiti SC, Kaiti SC, FangSong
+    Linux:    WenQuanYi Micro Hei, Noto Sans CJK SC
+
+  Linux users without Chinese fonts:
+    Ubuntu/Debian: sudo apt install fonts-wqy-microhei
+    Fedora:        sudo dnf install wqy-microhei-fonts
+
+---
+
+Word Formatting
+
+  The converter automatically enforces professional typesetting rules (Step 3):
+
+  - keepNext: Headings always stay with the following paragraph (no orphan headings)
+  - cantSplit: Table rows never split across pages
+  - widowControl: Paragraph orphan/widow line control
+
+  These are applied automatically after font setting. No configuration needed.
+
+---
+
+Environment Variables (optional, alternative to editing source)
+
+  PADDLEOCR_TOKEN        Overrides CONFIG["token"]
+  PADDLEOCR_SYNC_URL     Overrides CONFIG["sync_url"]
+  PADDLEOCR_ASYNC_URL    Overrides CONFIG["async_url"]
+  PADDLEOCR_MODE         Overrides CONFIG["mode"] (sync or async)
+
+  Environment variables take priority over CONFIG dict.
+
+---
+
+File Structure
+
+  ~/.claude/commands/
+  ├── doc-pipeline.md              Skill entry (Claude reads this, no need to edit)
+  └── doc-pipeline/
+      ├── docs/
+      │   ├── guide.txt            This file (English)
+      │   └── 安装指南.txt          Chinese user guide
+      └── scripts/
+          ├── ocr_api.py           OCR wrapper (fill in Token or set env var)
+          ├── convert.py           md→docx converter (configure fonts)
+          ├── pandoc_reference.docx Word output template
+          └── requirements.txt     pip dependencies
+
+  Related skills:
+    /word-gen    Generate Word documents from scratch using python-docx
+
+---
+
+FAQ
+
+  Q: pandoc not found?
+  A: Restart terminal after install. Windows: check %LOCALAPPDATA%\Pandoc\.
+     macOS: check /usr/local/bin/pandoc.
+
+  Q: OCR returns 401/403?
+  A: Token is invalid or expired. Get a new one from https://aistudio.baidu.com/paddleocr,
+     or check the PADDLEOCR_TOKEN environment variable.
+
+  Q: Formulas display incorrectly in Word?
+  A: Formulas use Office Math (OMML) format, editable in Word 2016+.
+     If they show as code blocks, your Word version may be too old.
+
+  Q: Chinese text shows as boxes/garbled?
+  A: System is missing the font. Change FONT_CONFIG to a font installed on your system
+     (see font names by platform above).
+
+  Q: Large file OCR is slow?
+  A: Async mode polls every 5 seconds. A 10-page PDF takes about 1-3 minutes.
+     Sync mode is only suitable for single pages.
+
+  Q: pandoc_reference.docx is damaged or missing?
+  A: Delete it and convert.py will fall back to pandoc default styles.
+     To regenerate: pandoc --print-default-data-file reference.docx > pandoc_reference.docx
+
+  Q: Can I use the scripts without Claude Code?
+  A: Yes. Both Python scripts are standalone:
+     python scripts/ocr_api.py <file> <output_dir>
+     python scripts/convert.py <md_dir> <docx_output_dir>
+
+---
+
+Sharing with Others
+
+  Package it:
+    zip -r doc-pipeline.zip doc-pipeline/ doc-pipeline.md
+    (or use your file manager to zip the doc-pipeline folder and doc-pipeline.md together)
+
+  Recipient installation:
+    1. Extract to ~/.claude/commands/
+    2. Install pandoc and Python packages (see Prerequisites above)
+    3. Register PaddleOCR Token (if using OCR)
+    4. Type /doc-pipeline in Claude Code
+
+  Note: The zip contains no API keys. Tokens are not distributed with the code.

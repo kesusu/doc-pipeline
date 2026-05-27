@@ -1,0 +1,173 @@
+文档处理流水线 — 安装与使用指南
+================================
+
+这是什么？
+  一个 Claude Code 技能，帮你完成：
+  1. OCR 文字识别：扫描 PDF / 图片 → Markdown 文字
+  2. 文档转换：Markdown → Word（含可编辑公式）
+
+  在 Claude Code 中输入 /doc-pipeline 即可启动。
+
+---
+
+前置条件
+
+  1. Python 3.8+
+     检查：python --version 或 python3 --version
+
+  2. pandoc（必须 — 负责将 Markdown 转为 Word）
+     Windows:  winget install JohnMacFarlane.Pandoc
+     macOS:    brew install pandoc
+     Linux:    sudo apt install pandoc  (Debian/Ubuntu)
+               sudo dnf install pandoc  (Fedora)
+     安装后重启终端，验证：pandoc --version
+
+  3. Python 依赖
+     pip install requests python-docx lxml
+     或：pip install -r ~/.claude/commands/doc-pipeline/scripts/requirements.txt
+
+  4. PaddleOCR API Token（仅 OCR 功能需要）
+     注册地址：https://aistudio.baidu.com/paddleocr
+     注册后获取 Token，有两种方式配置：
+       方式 A：编辑 scripts/ocr_api.py 的 CONFIG["token"] 字段
+       方式 B：设置环境变量 PADDLEOCR_TOKEN（推荐，不侵入源码）
+     不需要 OCR？跳过此步，选模式 B 即可。
+
+---
+
+使用方法
+
+  输入 /doc-pipeline 启动。Claude 会引导你完成每一步。
+
+  模式 A：OCR 识别（图片/PDF → Markdown）
+  模式 B：转换文档（已有 Markdown → Word）
+  模式 C：完整流程（OCR → Word 一步到位）
+
+  也可以一次性指定：
+    /doc-pipeline 把 textbook.pdf 转成 Word
+    /doc-pipeline 转换 notes 目录下的所有 md
+
+---
+
+OCR API 模式说明
+
+  支持两种 PaddleOCR API 模式：
+
+  模式         API                      适用场景
+  sync         layout-parsing（同步）    单页/小文件，立即返回
+  async        jobs API（异步轮询）      多页 PDF，需要等待 1-5 分钟
+
+  默认使用 async 模式。可在 ocr_api.py 的 CONFIG["mode"] 中切换，
+  或设置环境变量 PADDLEOCR_MODE=sync。
+
+  注意：同步和异步模式使用不同的 API 端点和认证格式，
+  这是 PaddleOCR API 的设计，无需手动处理。
+
+---
+
+自定义字体
+
+  默认字体：正文宋体、标题黑体、英文 Times New Roman。
+
+  编辑 scripts/convert.py 顶部的 FONT_CONFIG：
+
+    FONT_CONFIG = {
+        'cn_body': 'SimSun',          # 正文中文字体
+        'cn_heading': 'SimHei',       # 标题字体（Heading 样式）
+        'latin': 'Times New Roman',   # 英文/数字/公式字体
+    }
+
+  各平台常见中文字体名：
+    Windows:  SimSun（宋体）, SimHei（黑体）, KaiTi（楷体）, FangSong（仿宋）, Microsoft YaHei（微软雅黑）
+    macOS:    Songti SC（宋体）, Heiti SC（黑体）, Kaiti SC（楷体）, FangSong（仿宋）
+    Linux:    WenQuanYi Micro Hei（文泉驿微米黑）, Noto Sans CJK SC（思源黑体）
+
+  Linux 用户如未安装中文字体：
+    Ubuntu/Debian: sudo apt install fonts-wqy-microhei
+    Fedora:        sudo dnf install wqy-microhei-fonts
+
+---
+
+Word 排版规范
+
+  转换器自动执行专业排版规则（第 3 步）：
+
+  - keepNext：标题与正文同页，不会孤零零出现在页尾
+  - cantSplit：表格行不跨页拆行
+  - widowControl：段落孤行/寡行控制
+
+  无需配置，自动执行。
+
+---
+
+环境变量配置（可选，替代编辑源码）
+
+  PADDLEOCR_TOKEN        覆盖 CONFIG["token"]
+  PADDLEOCR_SYNC_URL     覆盖 CONFIG["sync_url"]
+  PADDLEOCR_ASYNC_URL    覆盖 CONFIG["async_url"]
+  PADDLEOCR_MODE         覆盖 CONFIG["mode"]（sync 或 async）
+
+  环境变量优先级高于 CONFIG 字典。
+
+---
+
+文件结构
+
+  ~/.claude/commands/
+  ├── doc-pipeline.md              技能入口（Claude 执行指令，不需要手动编辑）
+  └── doc-pipeline/
+      ├── docs/
+      │   └── 安装指南.txt         本文件
+      └── scripts/
+          ├── ocr_api.py           OCR 封装（填入 Token 或设环境变量）
+          ├── convert.py           md→docx 转换（配置字体）
+          ├── pandoc_reference.docx Word 输出模板
+          └── requirements.txt     pip 依赖
+
+  相关技能：
+    /word-gen    用 python-docx 从零生成 Word 文档（新建表格/报告时使用）
+
+---
+
+常见问题
+
+  Q: pandoc 找不到？
+  A: 确认安装后重启终端。Windows 检查 %LOCALAPPDATA%\Pandoc\，macOS 检查 /usr/local/bin/pandoc。
+
+  Q: OCR 返回 401/403？
+  A: Token 无效或过期。去 https://aistudio.baidu.com/paddleocr 重新获取，或检查环境变量 PADDLEOCR_TOKEN。
+
+  Q: Word 里公式显示异常？
+  A: 公式使用 Office Math（OMML）格式，Word 2016+ 双击即可编辑。
+     如显示为代码块，检查 Word 版本是否过旧。
+
+  Q: 中文显示为方块/乱码？
+  A: 系统缺少对应字体。在 FONT_CONFIG 中换成系统已有的字体（见上方各平台字体名）。
+
+  Q: 大文件 OCR 很慢？
+  A: 异步模式会轮询等待（每 5 秒检查一次）。10 页 PDF 约 1-3 分钟。同步模式只适合单页。
+
+  Q: pandoc_reference.docx 损坏或丢失了？
+  A: 可以删除它，convert.py 会自动 fallback 到 pandoc 默认样式。如需自定义模板，
+     用 pandoc 生成：pandoc --print-default-data-file reference.docx > pandoc_reference.docx
+
+  Q: 能在没有 Claude Code 的环境下单独使用脚本吗？
+  A: 可以。两个 Python 脚本都是独立可运行的：
+     python scripts/ocr_api.py <文件> <输出目录>
+     python scripts/convert.py <md目录> <docx输出目录>
+
+---
+
+分享给他人
+
+  打包方式：
+    zip -r doc-pipeline.zip doc-pipeline/ doc-pipeline.md
+    （或用资源管理器把 doc-pipeline 文件夹和 doc-pipeline.md 一起压缩）
+
+  对方安装：
+    1. 解压到 ~/.claude/commands/ 下
+    2. 安装 pandoc 和 Python 依赖（见上方前置条件）
+    3. 注册 PaddleOCR Token（如需 OCR 功能）
+    4. 在 Claude Code 中输入 /doc-pipeline 即可使用
+
+  注意：zip 包不含 API 密钥。Token 不会随代码分发。
